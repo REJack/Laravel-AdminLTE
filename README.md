@@ -6,7 +6,7 @@
 [![StyleCI](https://styleci.io/repos/38200433/shield?branch=master)](https://styleci.io/repos/38200433)
 [![Total Downloads](https://img.shields.io/packagist/dt/jeroennoten/Laravel-AdminLTE.svg?style=flat-square)](https://packagist.org/packages/jeroennoten/Laravel-AdminLTE)
 
-This package provides an easy way to quickly set up [AdminLTE v3](https://adminlte.io) with Laravel 6. It has no requirements and dependencies besides Laravel, so you can start building your admin panel immediately. The package just provides a Blade template that you can extend and advanced menu configuration possibilities. A replacement for the `make:auth` Artisan command that uses AdminLTE styled views instead of the default Laravel ones is also included.
+This package provides an easy way to quickly set up [AdminLTE v3](https://adminlte.io) with Laravel 6 or higher. It has no requirements and dependencies besides Laravel, so you can start building your admin panel immediately. The package just provides a Blade template that you can extend and advanced menu configuration possibilities. A replacement for the `make:auth` Artisan command that uses AdminLTE styled views instead of the default Laravel ones is also included.
 
 If you want use the older versions, please use the following versions:
 - Version 1.x or branch laravel5-adminlte2:
@@ -361,6 +361,11 @@ The user is displayed at the upper right corner of your admin panel.
 
     Whether to enable the user description for the usermenu.
     _**Note:**_ You need for this a extra function named `adminlte_desc()` inside the `App/User`.
+    
+- __`usermenu_profile_url`__
+
+    Whether to enable the user profile url can be set dynamically for the user instead of the config key `profile_url`.
+    _**Note:**_ You need for this a extra function named `adminlte_profile_url()` inside the `App/User`. The return value should be a string, not a route or url.
 
 #### 6.4.1 User Image & Description Example Code
 Example code for the `App/User` with custom image & description functions.
@@ -377,6 +382,11 @@ Example code for the `App/User` with custom image & description functions.
         public function adminlte_desc()
         {
             return 'That\'s a nice guy';
+        }
+        
+        public function adminlte_profile_url()
+        {
+            return 'profile/username';
         }
     }
 ```
