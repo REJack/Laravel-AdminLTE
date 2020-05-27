@@ -36,11 +36,14 @@ class AdminLte
 
         // Check for filter option.
 
-        if ($filterOpt !== null) {
-            $filterOpt = explode('-', $filterOpt);
-            $filterOpt = array_map('ucfirst', $filterOpt);
-            $filterOpt = lcfirst(implode('', $filterOpt));
-            return array_filter($this->menu, [$this, $filterOpt.'Filter']);
+        if ($filterOpt == 'sidebar') {
+            return array_filter($this->menu, [$this, 'sidebarFilter']);
+        } elseif ($filterOpt == 'navbar-left') {
+            return array_filter($this->menu, [$this, 'navbarLeftFilter']);
+        } elseif ($filterOpt == 'navbar-right') {
+            return array_filter($this->menu, [$this, 'navbarRightFilter']);
+        } elseif ($filterOpt == 'navbar-user') {
+            return array_filter($this->menu, [$this, 'navbarUserMenuFilter']);
         }
 
         return $this->menu;
@@ -193,7 +196,7 @@ class AdminLte
     /**
      * Filter method for navbar dropdown user menu items.
      */
-    private function navbarUserFilter($item)
+    private function navbarUserMenuFilter($item)
     {
         return $this->itemCheck($item, 'user');
     }
@@ -205,6 +208,7 @@ class AdminLte
         if (! empty($type)) {
             $type = '_'.$type;
         }
+
         if (isset($item['topnav'.$type]) && $item['topnav'.$type]) {
             return true;
         }
