@@ -36,17 +36,14 @@ class AdminLte
 
         // Check for filter option.
 
-        if ($filterOpt == 'sidebar') {
-            return array_filter($this->menu, [$this, 'sidebarFilter']);
-        } elseif ($filterOpt == 'navbar-left') {
-            return array_filter($this->menu, [$this, 'navbarLeftFilter']);
-        } elseif ($filterOpt == 'navbar-right') {
-            return array_filter($this->menu, [$this, 'navbarRightFilter']);
-        } elseif ($filterOpt == 'navbar-user') {
-            return array_filter($this->menu, [$this, 'navbarUserMenuFilter']);
-        } else {
-            return $this->menu;
+        if ($filterOpt !== null) {
+            $filterOpt = explode('-', $filterOpt);
+            $filterOpt = array_map('ucfirst', $filterOpt);
+            $filterOpt = lcfirst(implode('', $filterOpt));
+            return array_filter($this->menu, [$this, $filterOpt.'Filter']);
         }
+
+        return $this->menu;
     }
 
     /**
@@ -55,7 +52,6 @@ class AdminLte
     public function getBodyClasses()
     {
         $body_classes = [];
-        $screen_sizes = ['xs', 'sm', 'md', 'lg', 'xl'];
 
         // Add classes related to the "sidebar_mini" configuration.
 
@@ -90,15 +86,10 @@ class AdminLte
         }
 
         // Add classes related to fixed sidebar, these are not compatible with
-        // "layout_topnav".
+        // "layout_topnav" and check for fixed sidebar configuration.
 
-        if (! config('adminlte.layout_topnav') && ! View::getSection('layout_topnav')) {
-
-            // Check for fixed sidebar configuration.
-
-            if (config('adminlte.layout_fixed_sidebar')) {
-                $body_classes[] = 'layout-fixed';
-            }
+        if ((!config('adminlte.layout_topnav') && !View::getSection('layout_topnav')) && config('adminlte.layout_fixed_sidebar')) {
+            $body_classes[] = 'layout-fixed';
         }
 
         // Add classes related to fixed footer and navbar, these are not
@@ -108,37 +99,10 @@ class AdminLte
 
             // Check for fixed navbar configuration.
 
-            $fixed_navbar_cfg = config('adminlte.layout_fixed_navbar');
-
-            if ($fixed_navbar_cfg === true) {
-                $body_classes[] = 'layout-navbar-fixed';
-            } elseif (is_array($fixed_navbar_cfg)) {
-                foreach ($fixed_navbar_cfg as $size => $enabled) {
-                    if (in_array($size, $screen_sizes)) {
-                        $size = $size == 'xs' ? '' : '-'.$size;
-                        $body_classes[] = $enabled == true ?
-                            'layout'.$size.'-navbar-fixed' :
-                            'layout'.$size.'-navbar-not-fixed';
-                    }
-                }
-            }
+            $body_classes = array_merge($body_classes, $this->fixedConfigCheck('navbar'));
 
             // Check for fixed footer configuration.
-
-            $fixed_footer_cfg = config('adminlte.layout_fixed_footer');
-
-            if ($fixed_footer_cfg === true) {
-                $body_classes[] = 'layout-footer-fixed';
-            } elseif (is_array($fixed_footer_cfg)) {
-                foreach ($fixed_footer_cfg as $size => $enabled) {
-                    if (in_array($size, $screen_sizes)) {
-                        $size = $size == 'xs' ? '' : '-'.$size;
-                        $body_classes[] = $enabled == true ?
-                            'layout'.$size.'-footer-fixed' :
-                            'layout'.$size.'-footer-not-fixed';
-                    }
-                }
-            }
+            $body_classes = array_merge($body_classes, $this->fixedConfigCheck('footer'));
         }
 
         // Add custom classes, related to the "classes_body" configuration.
@@ -195,15 +159,7 @@ class AdminLte
      */
     private function sidebarFilter($item)
     {
-        if (isset($item['topnav']) && $item['topnav']) {
-            return false;
-        }
-
-        if (isset($item['topnav_right']) && $item['topnav_right']) {
-            return false;
-        }
-
-        if (isset($item['topnav_user']) && $item['topnav_user']) {
+        if ($this->itemCheck($item) || $this->itemCheck($item, 'right') || $this->itemCheck($item, 'user')) {
             return false;
         }
 
@@ -215,11 +171,7 @@ class AdminLte
      */
     private function navbarLeftFilter($item)
     {
-        if (isset($item['topnav_right']) && $item['topnav_right']) {
-            return false;
-        }
-
-        if (isset($item['topnav_user']) && $item['topnav_user']) {
+        if ($this->itemCheck($item, 'right') || $this->itemCheck($item, 'user')) {
             return false;
         }
 
@@ -235,7 +187,25 @@ class AdminLte
      */
     private function navbarRightFilter($item)
     {
-        if (isset($item['topnav_right']) && $item['topnav_right']) {
+        return $this->itemCheck($item, 'right');
+    }
+
+    /**
+     * Filter method for navbar dropdown user menu items.
+     */
+    private function navbarUserFilter($item)
+    {
+        return $this->itemCheck($item, 'user');
+    }
+
+    /**
+     * Item topnav check
+     */
+    private function itemCheck($item, $type = '') {
+        if (! empty($type)) {
+            $type = '_'.$type;
+        }
+        if (isset($item['topnav'.$type]) && $item['topnav'.$type]) {
             return true;
         }
 
@@ -243,14 +213,27 @@ class AdminLte
     }
 
     /**
-     * Filter method for navbar dropdown user menu items.
+     * Config check for fixed footer & fixed navbar.
      */
-    private function navbarUserMenuFilter($item)
-    {
-        if (isset($item['topnav_user']) && $item['topnav_user']) {
-            return true;
+    private function fixedConfigCheck($place) {
+        $body_classes = [];
+        $screen_sizes = ['xs', 'sm', 'md', 'lg', 'xl'];
+
+        $fixed_cfg = config('adminlte.layout_fixed_'.$place);
+
+        if ($fixed_cfg === true) {
+            $body_classes[] = 'layout-'.$place.'-fixed';
+        } elseif (is_array($fixed_cfg)) {
+            foreach ($fixed_cfg as $size => $enabled) {
+                if (in_array($size, $screen_sizes)) {
+                    $size = $size == 'xs' ? '' : '-'.$size;
+                    $body_classes[] = $enabled == true ?
+                        'layout'.$size.'-'.$place.'-fixed' :
+                        'layout'.$size.'-'.$place.'-not-fixed';
+                }
+            }
         }
 
-        return false;
+        return $body_classes;
     }
 }
