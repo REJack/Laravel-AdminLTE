@@ -7,7 +7,7 @@ use JeroenNoten\LaravelAdminLte\Http\Helpers\CommandHelper;
 
 class AdminLteStatusCommand extends Command
 {
-    protected $signature = 'adminlte:status'.
+    protected $signature = 'adminlte:status '.
         '{--include-images : Includes AdminLTE asset images to the checkup}';
 
     protected $description = 'Checks the install status for AdminLTE assets, routes & views.';
@@ -40,6 +40,7 @@ class AdminLteStatusCommand extends Command
         foreach ($assets as $asset_key => $asset) {
             $table_content[] = ['assets', $asset['name'], $this->resolveCompare($this->checkAsset($asset_key, $this->option('include-images'))), 'true'];
         }
+
         $bar->advance();
 
         // Checking Config
@@ -47,7 +48,7 @@ class AdminLteStatusCommand extends Command
         $bar->advance();
 
         // Checking Translations
-        $table_content[] = ['translations', 'Default Translations', $this->resolveCompare($this->compareFolder('resources/lang', 'resources/lang', $package_path, base_path(), true, ['menu.php'])), 'true'];
+        $table_content[] = ['translations', 'Default Translations', $this->resolveCompare($this->compareFolder($package_path.'resources/lang', base_path('resources/lang'), true, ['menu.php'])), 'true'];
         $bar->advance();
 
         // Checking Main Views
@@ -55,10 +56,11 @@ class AdminLteStatusCommand extends Command
         $bar->advance();
 
         // Checking Main Views
-        $table_content[] = ['main_views', 'Main Views', $this->resolveCompare($this->compareFolder('resources/views', 'resources/views/vendor/adminlte/', $package_path, base_path(), true)), 'false'];
+        $table_content[] = ['main_views', 'Main Views', $this->resolveCompare($this->compareFolder($package_path.'resources/views', base_path('resources/views/vendor/adminlte/'), true)), 'false'];
         $bar->advance();
 
         $bar->finish();
+
 
         $this->line('');
         $this->line('Installation Checked');
@@ -78,9 +80,9 @@ class AdminLteStatusCommand extends Command
             return 'Installed';
         } elseif ($compare === 2) {
             return 'Update Available / Modified';
-        } elseif ($compare === 0) {
-            return 'Not Installed';
         }
+
+        return 'Not Installed';
     }
 
     /**
@@ -98,12 +100,14 @@ class AdminLteStatusCommand extends Command
         $package_path = $install_command->getProtected('assets_package_path');
         $compare = $compare_multiple = null;
 
+
         if (is_array($asset['package_path'])) {
             foreach ($asset['package_path'] as $key => $value) {
-                $compare_multiple += $this->compareFolder($asset['package_path'][$key], $asset['assets_path'][$key], base_path($package_path), public_path($assets_path), $asset['recursive'] ?? true, $asset['ignore'] ?? [], $asset['ignore_ending'] ?? [], $asset['images'] ?? null, $asset['images_path'] ?? null);
+                $compare_multiple += $this->compareFolder(base_path($package_path).$asset['package_path'][$key], public_path($assets_path).$asset['assets_path'][$key], $asset['recursive'] ?? true, $asset['ignore'] ?? [], $asset['ignore_ending'] ?? [], $asset['images'] ?? null, $asset['images_path'] ?? null);
             }
 
             $compare_multiple /= count($asset['package_path']);
+
             if ($compare_multiple == 1) {
                 $compare = 1;
             } elseif ($compare_multiple >= 1) {
@@ -112,7 +116,7 @@ class AdminLteStatusCommand extends Command
                 $compare = 0;
             }
         } else {
-            $compare = $this->compareFolder($asset['package_path'], $asset['assets_path'], base_path($package_path), public_path($assets_path), $asset['recursive'] ?? true, $asset['ignore'] ?? [], $asset['ignore_ending'] ?? [], $asset['images'] ?? null, $asset['images_path'] ?? null);
+            $compare = $this->compareFolder(base_path($package_path).$asset['package_path'], public_path($assets_path).$asset['assets_path'], $asset['recursive'] ?? true, $asset['ignore'] ?? [], $asset['ignore_ending'] ?? [], $asset['images'] ?? null, $asset['images_path'] ?? null);
         }
 
         return $compare;
@@ -123,8 +127,6 @@ class AdminLteStatusCommand extends Command
      *
      * @param  $source_path
      * @param  $destination_path
-     * @param  $source_base_path
-     * @param  $destination_base_path
      * @param  $recursive
      * @param  $ignore
      * @param  $ignore_ending
@@ -132,7 +134,7 @@ class AdminLteStatusCommand extends Command
      * @param  $images_path
      * @return int
      */
-    public function compareFolder($source_path, $destination_path, $source_base_path = null, $destination_base_path = null, $recursive = true, $ignore = [], $ignore_ending = [], $images = null, $images_path = null, $ignore_base_folder = null)
+    public function compareFolder($source_path, $destination_path, $recursive = true, $ignore = [], $ignore_ending = [], $images = null, $images_path = null, $ignore_base_folder = null)
     {
         $dest_exist = true;
         $dest_missing = false;
@@ -140,27 +142,13 @@ class AdminLteStatusCommand extends Command
         $dest_child_exist = true;
         $dest_child_missmatch = false;
 
-        if (! $source_base_path) {
-            $source_base_path = base_path();
-        }
-        if (substr($source_base_path, -1) !== '/') {
-            $source_base_path .= '/';
-        }
-
-        if (! $destination_base_path) {
-            $destination_base_path = public_path();
-        }
-        if (substr($destination_base_path, -1) !== '/') {
-            $destination_base_path .= '/';
-        }
-
         if (is_array($source_path)) {
             foreach ($source_path as $key => $destination_child_path) {
-                if (! file_exists($destination_base_path.$destination_child_path)) {
+                if (! file_exists($destination_child_path)) {
                     $dest_exist = false;
                     $dest_child_exist = false;
                 } else {
-                    $compare = CommandHelper::compareDirectories($source_base_path.$source_path[$key], $destination_base_path.$destination_child_path, '', $ignore, $ignore_ending, $recursive);
+                    $compare = CommandHelper::compareDirectories($source_path[$key], $destination_child_path, '', $ignore, $ignore_ending, $recursive);
 
                     if (! $dest_child_missmatch && $compare) {
                         $dest_child_missmatch = false;
@@ -170,10 +158,10 @@ class AdminLteStatusCommand extends Command
                 }
             }
         } else {
-            if (! file_exists($destination_base_path.$destination_path)) {
+            if (! file_exists($destination_path)) {
                 $dest_exist = false;
             } else {
-                $compare = CommandHelper::compareDirectories($source_base_path.$source_path, $destination_base_path.$destination_path, '', $ignore, $ignore_ending, $recursive, null, true);
+                $compare = CommandHelper::compareDirectories($source_path, $destination_path, '', $ignore, $ignore_ending, $recursive, null, true);
                 if ($compare === false) {
                     $dest_missmatch = true;
                 } elseif ($compare === null) {
@@ -183,16 +171,18 @@ class AdminLteStatusCommand extends Command
         }
 
         if ($images_path && $images) {
-            $asset_images_path = $images_path;
-
             foreach ($images as $image_destination_path => $image_asset_path) {
-                $compareFile = $this->compareFile($source_base_path.$image_destination_path, $destination_base_path.$images_path.$image_asset_path);
-                if ($compareFile === 0) {
-                    $dest_child_exist = false;
-                } elseif ($compareFile == 1) {
-                    $dest_child_missmatch = false;
-                } elseif ($compareFile == 2) {
-                    $dest_child_missmatch = true;
+                $compareFile = $this->compareFile($image_destination_path, $images_path.$image_asset_path);
+                switch ($this->compareFile($image_destination_path, $images_path.$image_asset_path)) {
+                    case 0:
+                        $dest_child_exist = false;
+                        break;
+                    case 1:
+                        $dest_child_missmatch = false;
+                        break;
+                    case 2:
+                        $dest_child_missmatch = true;
+                        break;
                 }
             }
         }
@@ -201,9 +191,9 @@ class AdminLteStatusCommand extends Command
             return 1;
         } elseif ($dest_exist && (($dest_missmatch || $dest_child_missmatch) || ! $dest_child_exist)) {
             return 2;
-        } elseif (! $dest_exist || $dest_missing) {
-            return 0;
         }
+
+        return 0;
     }
 
     /**
@@ -231,9 +221,9 @@ class AdminLteStatusCommand extends Command
             return 1;
         } elseif ($file_exist && $file_missmatch) {
             return 2;
-        } elseif (! $file_exist) {
-            return 0;
         }
+
+        return 0;
     }
 
     /**
@@ -259,12 +249,12 @@ class AdminLteStatusCommand extends Command
             }
         }
 
-        if ($view_found === 0) {
-            return 0;
-        } elseif ($view_found === $view_excepted) {
+        if ($view_found === $view_excepted) {
             return 1;
         } elseif ($view_found !== $view_excepted) {
             return 2;
         }
+
+        return 0;
     }
 }

@@ -26,6 +26,13 @@ class TestCase extends BaseTestCase
 
     private $routeCollection;
 
+    protected function getPackageProviders($app)
+    {
+        return [
+            JeroenNoten\LaravelAdminLte\AdminLteServiceProvider::class
+        ];
+    }
+
     protected function makeMenuBuilder($uri = 'http://example.com', GateContract $gate = null, $locale = 'en')
     {
         return new Builder([

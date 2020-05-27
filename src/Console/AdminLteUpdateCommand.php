@@ -6,7 +6,7 @@ use Illuminate\Console\Command;
 
 class AdminLteUpdateCommand extends Command
 {
-    protected $signature = 'adminlte:update ';
+    protected $signature = 'adminlte:update';
 
     protected $description = 'Updated the all the required assets for AdminLTE';
 
